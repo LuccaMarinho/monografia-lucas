@@ -183,31 +183,31 @@ def create_spotify_playlist(user_id, playlist_name, track_ids, sp):
         return None
 
 if "signed_in" not in st.session_state:
-        st.session_state["signed_in"] = False
-    if "cached_token" not in st.session_state:
-        st.session_state["cached_token"] = ""
-    if "code" not in st.session_state:
-        st.session_state["code"] = ""
-    if "oauth" not in st.session_state:
-        st.session_state["oauth"] = None
+    st.session_state["signed_in"] = False
+if "cached_token" not in st.session_state:
+    st.session_state["cached_token"] = ""
+if "code" not in st.session_state:
+    st.session_state["code"] = ""
+if "oauth" not in st.session_state:
+    st.session_state["oauth"] = None
     
     # %% authenticate with response stored in url
     
     # get current url (stored as dict)
-    url_params = st.query_params()
+url_params = st.query_params()
     
     # attempt sign in with cached token
-    if st.session_state["cached_token"] != "":
-        sp = app_sign_in()
+if st.session_state["cached_token"] != "":
+    sp = app_sign_in()
     # if no token, but code in url, get code, parse token, and sign in
-    elif "code" in url_params:
+elif "code" in url_params:
         # all params stored as lists, see doc for explanation
-        st.session_state["code"] = url_params["code"]
-        app_get_token()
-        sp = app_sign_in()
+    st.session_state["code"] = url_params["code"]
+    app_get_token()
+    sp = app_sign_in()
     # otherwise, prompt for redirect
-    else:
-        app_display_welcome()
+else:
+    app_display_welcome()
 
 
 def main():
