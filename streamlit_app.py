@@ -38,11 +38,11 @@ def authenticate():
     if code:
         try:
             token_info = sp_oauth.get_access_token(code[0])
-        st.session_state['access_token'] = token_info['access_token']
-        st.session_state['refresh_token'] = token_info['refresh_token']
-        st.session_state['token_expiry'] = time.time() + token_info['expires_in']
-        st.success("Successfully authenticated with Spotify!")
-        st.rerun()
+            st.session_state['access_token'] = token_info['access_token']
+            st.session_state['refresh_token'] = token_info['refresh_token']
+            st.session_state['token_expiry'] = time.time() + token_info['expires_in']
+            st.success("Successfully authenticated with Spotify!")
+            st.rerun()
         except spotipy.oauth2.SpotifyOauthError as e:
             st.error(f"Error authenticating with Spotify: {e}")
 
