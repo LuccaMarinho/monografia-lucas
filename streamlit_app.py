@@ -47,7 +47,14 @@ def app_get_token():
 
 def app_sign_in():
     try:
-        sp = sign_in(st.session_state["cached_token"])
+        # Try to get cached token
+        token = oauth.get_cached_token()
+        if token:
+            sp = sign_in(token)
+        else:
+            # If no cached token, try to retrieve from session state
+            token = st.session_state["cached_token"]
+            sp = sign_in(token)
     except Exception as e:
         st.error("An error occurred during sign-in!")
         st.write("The error is as follows:")
@@ -56,8 +63,7 @@ def app_sign_in():
         st.session_state["signed_in"] = True
         app_display_welcome()
         st.success("Sign in success!")
-        
-    return sp
+        return sp
 
 def app_display_welcome():
     
