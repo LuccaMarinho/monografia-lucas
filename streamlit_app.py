@@ -7,6 +7,7 @@ import webbrowser
 import time
 import random
 import heapq
+import os
 from sklearn.metrics.pairwise import cosine_similarity
 import streamlit.components.v1 as components
 
@@ -201,46 +202,41 @@ elif code:
 else:
     app_display_welcome()
 
-
-def main():
-    if st.session_state["signed_in"]:
-        current_user = sp.current_user()
-        user_id = current_user['id']
+if st.session_state["signed_in"]:
+    current_user = sp.current_user()
+    user_id = current_user['id']
         
-        dfa = pd.read_csv('track_names.csv', sep=";")
-        G = load_graph()
-        track_names = load_track_names('track_names.csv')
+    dfa = pd.read_csv('track_names.csv', sep=";")
+    G = load_graph()
+    track_names = load_track_names('track_names.csv')
     
-        start_track = st.selectbox('Start Track', track_names)
-        end_track = st.selectbox('End Track', track_names)
-        num_songs = st.number_input('Number of Songs', min_value=2)
+    start_track = st.selectbox('Start Track', track_names)
+    end_track = st.selectbox('End Track', track_names)
+    num_songs = st.number_input('Number of Songs', min_value=2)
     
-        if st.button('Find Playlist Tracks'):
-            if start_track and end_track and num_songs >= 2:
-                start_track_id = get_track_id_from_df(start_track, dfa)
-                end_track_id = get_track_id_from_df(end_track, dfa)
+    if st.button('Find Playlist Tracks'):
+        if start_track and end_track and num_songs >= 2:
+            start_track_id = get_track_id_from_df(start_track, dfa)
+            end_track_id = get_track_id_from_df(end_track, dfa)
     
-                if start_track_id and end_track_id:
-                    try:
-                        closest_songs = find_closest_songs_weighted(
+            if start_track_id and end_track_id:
+                try:
+                    closest_songs = find_closest_songs_weighted(
                                 G, start_track_id, end_track_id, num_songs - 2, sp, dfa
                             )
-                        closest_songs.insert(0, start_track_id)  
-                        closest_songs.append(end_track_id)
-                        track_names = [get_track_info(track_id, sp)[0] for track_id in closest_songs]
-                        st.write('Playlist Tracks:', track_names)
-                        playlist_id = create_spotify_playlist(user_id, 'Generated Playlist', closest_songs, sp)
-                        st.write(f'Playlist created successfully: https://open.spotify.com/playlist/{playlist_id}')
+                    closest_songs.insert(0, start_track_id)  
+                    closest_songs.append(end_track_id)
+                    track_names = [get_track_info(track_id, sp)[0] for track_id in closest_songs]
+                    st.write('Playlist Tracks:', track_names)
+                    playlist_id = create_spotify_playlist(user_id, 'Generated Playlist', closest_songs, sp)
+                    st.write(f'Playlist created successfully: https://open.spotify.com/playlist/{playlist_id}')
     
-                    except Exception as e:
-                        st.error(f"Error finding path or creating playlist: {e}")
-                else:
-                    st.error("Track not found")
+                except Exception as e:
+                    st.error(f"Error finding path or creating playlist: {e}")
             else:
-                st.error('Please fill in all required fields and ensure "Number of Songs" is at least 2.')
-    else:
-        st.write('Waiting for authentication...')
+                st.error("Track not found")
+        else:
+            st.error('Please fill in all required fields and ensure "Number of Songs" is at least 2.')
+else:
+    st.write('Waiting for authentication...')
 
-
-if __name__ == '__main__':
-    main()
