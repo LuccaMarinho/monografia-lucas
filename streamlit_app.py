@@ -93,8 +93,6 @@ def app_display_welcome():
     if not st.session_state["signed_in"]:
         st.markdown(welcome_msg)
         st.button("Connect Spotify Account", on_click=open_page, args=(auth_url,))
-        st.write(" ".join(["No tokens found for this session. Please log in by",
-                          "clicking the link below."]))
 
 def open_page(url):
     """Opens a URL in a new tab using JavaScript."""
@@ -189,11 +187,17 @@ if "oauth" not in st.session_state:
     
     # %% authenticate with response stored in url
     
-    
+code = st.query_params.get("code")    
     # attempt sign in with cached token
 if st.session_state["cached_token"] != "":
     sp = app_sign_in()
     # if no token, but code in url, get code, parse token, and sign in
+elif code:
+    # all params stored as lists, see doc for explanation
+    st.session_state["code"] = code
+    app_get_token()
+    sp = app_sign_in()
+# otherwise, prompt for redirect
 else:
     app_display_welcome()
 
