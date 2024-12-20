@@ -194,7 +194,7 @@ if "oauth" not in st.session_state:
     # %% authenticate with response stored in url
     
     # get current url (stored as dict)
-url_params = st.query_params()
+url_params = st.query_params["code"]
     
     # attempt sign in with cached token
 if st.session_state["cached_token"] != "":
@@ -202,8 +202,8 @@ if st.session_state["cached_token"] != "":
     # if no token, but code in url, get code, parse token, and sign in
 elif "code" in url_params:
         # all params stored as lists, see doc for explanation
-    st.session_state["code"] = url_params["code"]
-    app_get_token()
+    st.session_state["code"] = url_params
+    
     sp = app_sign_in()
     # otherwise, prompt for redirect
 else:
