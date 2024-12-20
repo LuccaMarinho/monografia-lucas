@@ -28,7 +28,7 @@ def authenticate():
     auth_url = sp_oauth.get_authorize_url()
 
     if st.button("Connect Spotify Account"):  # Add a button
-        webbrowser.open(auth_url)  # Open the authentication URL in a new tab
+        webbrowser.open_new(auth_url)  # Open the authentication URL in a new tab
 
     code = st.query_params.get("code")  # Use experimental_get_query_params
     if code:
