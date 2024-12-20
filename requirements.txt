@@ -1,6 +1,4 @@
-streamlit
 networkx
 spotipy
 streamlit
-heapq
 scikit-learn
