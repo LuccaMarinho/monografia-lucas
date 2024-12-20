@@ -28,7 +28,9 @@ def authenticate():
         show_dialog=True  # Show dialog for each user
     )
 
-    st.button("Connect Spotify Account", on_click=open_page, args=sp_oauth.get_authorize_url())  # Add a button
+    auth_url = sp_oauth.get_authorize_url()
+
+    st.button("Connect Spotify Account", on_click=open_page, args=(auth_url,))  # Add a button
 
     code = st.query_params.get("code")  # Use experimental_get_query_params
     if code:
