@@ -8,6 +8,8 @@ import time
 import random
 import heapq
 from sklearn.metrics.pairwise import cosine_similarity
+from streamlit.components.v1 import html
+
 
 # Replace with your Spotify API credentials
 client_id = '7f639bf9d989414aa6af202b0b27edff'
@@ -15,6 +17,7 @@ client_secret = 'ea33b989a84841949af25f8fa7bca64a'
 redirect_uri = 'https://monografia-ufmg-lucas.streamlit.app/'  # Replace with your redirect URI
 
 scope = 'user-read-private user-library-read playlist-modify-public playlist-modify-private'
+
 
 def authenticate():
     sp_oauth = SpotifyOAuth(
@@ -27,8 +30,7 @@ def authenticate():
 
     auth_url = sp_oauth.get_authorize_url()
 
-    if st.button("Connect Spotify Account"):  # Add a button
-        webbrowser.open_new(auth_url)  # Open the authentication URL in a new tab
+    if st.button("Connect Spotify Account", on_click=open_page, args=(auth_url)):  # Add a button
 
     code = st.query_params.get("code")  # Use experimental_get_query_params
     if code:
@@ -36,6 +38,14 @@ def authenticate():
         st.session_state['access_token'] = token_info['access_token']
         st.session_state['token_expiry'] = time.time() + token_info['expires_in']
         st.success("Successfully authenticated with Spotify!")
+
+def open_page(url):
+    open_script= """
+        <script type="text/javascript">
+            window.open('%s', '_blank').focus();
+        </script>
+    """ % (url)
+    html(open_script)
 
 def is_token_expired():
     if 'token_expiry' in st.session_state:
