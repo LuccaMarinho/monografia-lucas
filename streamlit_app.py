@@ -204,7 +204,7 @@ else:
 
 def main():
     if st.session_state["signed_in"]:
-        sp = spotipy.Spotify(auth=st.session_state['access_token'])
+        #sp = spotipy.Spotify(auth=st.session_state['cached_token'])
         current_user = sp.current_user()
         user_id = current_user['id']
         
