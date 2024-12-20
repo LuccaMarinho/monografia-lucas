@@ -2,7 +2,6 @@ streamlit
 networkx
 spotipy
 streamlit
-webbrowser
 time
 random
 heapq
