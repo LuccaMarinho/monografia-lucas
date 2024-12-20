@@ -30,10 +30,9 @@ def authenticate():
 
     if 'access_token' not in st.session_state:
         st.write("To use this app, you need to log in with your Spotify account.")
-        if st.button("Authenticate"):
-            auth_url = sp_oauth.get_authorize_url()
+        auth_url = sp_oauth.get_authorize_url()
             # Pass the auth_url to the open_page function using st.button's on_click
-            st.button("Connect Spotify Account", on_click=open_page, args=(auth_url,))  
+        st.button("Connect Spotify Account", on_click=open_page, args=(auth_url,))  
 
     code = st.query_params.get("code")
     if code:
@@ -59,12 +58,33 @@ def is_token_expired():
     return True
 
 def refresh_token():
-    # Implement logic to refresh the token using the refresh token 
-    # stored in session state
-    # ... (e.g., using the `sp_oauth.refresh_access_token()` method)
-    # Update the access token and expiration time in the session state
-    st.session_state['access_token'] = new_access_token  # Replace with the actual new token
-    st.session_state['token_expiry'] = new_expiration_time  # Replace with the actual new expiration time
+    """Refreshes the Spotify access token using the refresh token."""
+
+    sp_oauth = SpotifyOAuth(
+        client_id=client_id,
+        client_secret=client_secret,
+        redirect_uri=redirect_uri,
+        scope=scope,
+    )
+
+    if 'refresh_token' in st.session_state:
+        refresh_token = st.session_state['refresh_token']
+
+        try:
+            # Refresh the access token
+            new_token_info = sp_oauth.refresh_access_token(refresh_token)
+
+            # Update session state with new token info
+            st.session_state['access_token'] = new_token_info['access_token']
+            st.session_state['token_expiry'] = time.time() + new_token_info['expires_in']
+
+        except spotipy.oauth2.SpotifyOauthError as e:
+            st.error(f"Error refreshing token: {e}")
+            # You might want to handle the error by re-authenticating the user
+            # For example:
+            # del st.session_state['access_token']
+            # del st.session_state['refresh_token']
+            # st.experimental_rerun() 
 
 def load_track_names(filename):
     df = pd.read_csv(filename, sep=";")
