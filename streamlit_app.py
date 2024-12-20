@@ -30,7 +30,7 @@ def authenticate():
 
     auth_url = sp_oauth.get_authorize_url()
 
-    st.button("Connect Spotify Account", on_click=open_page, args=(auth_url))  # Add a button
+    st.button("Connect Spotify Account", on_click=open_page(auth_url))  # Add a button
 
     code = st.query_params.get("code")  # Use experimental_get_query_params
     if code:
