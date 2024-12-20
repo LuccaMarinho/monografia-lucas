@@ -247,9 +247,6 @@ def main():
             else:
                 st.error('Please fill in all required fields and ensure "Number of Songs" is at least 2.')
 
-    else:
-        st.write('Waiting for authentication...')
-
 if __name__ == '__main__':
     st.title('Spotify Playlist Generator')
     main()
