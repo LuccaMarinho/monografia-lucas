@@ -18,6 +18,9 @@ import random
 
 # %% spotify connection set up
 
+client_id = '7f639bf9d989414aa6af202b0b27edff'
+client_secret = 'ea33b989a84841949af25f8fa7bca64a'
+redirect_uri = 'https://monografia-ufmg-lucas.streamlit.app/' # Replace with your redirect URI
 
 
 # %% base func definitions
@@ -143,9 +146,9 @@ def app_sign_in():
 def app_display_welcome():
     
     # import secrets from streamlit deployment
-    cid = st.secrets["SPOTIPY_CLIENT_ID"]
-    csecret = st.secrets["SPOTIPY_CLIENT_SECRET"]
-    uri = st.secrets["SPOTIPY_REDIRECT_URI"]
+    cid = client_id
+    csecret = client_secret
+    uri = redirect_uri
 
     # set scope and establish connection
     scopes = " ".join(["user-read-private",
