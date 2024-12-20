@@ -1,1 +1,13 @@
 streamlit
+networkx
+spotipy
+spotipy.oauth2
+SpotifyOAuth
+as
+streamlit
+webbrowser
+time
+random
+heapq
+sklearn.metrics.pairwise
+cosine_similarity
