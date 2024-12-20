@@ -1,11 +1,9 @@
 streamlit
 networkx
 spotipy
-SpotifyOAuth
-as
 streamlit
 webbrowser
 time
 random
 heapq
-cosine_similarity
+scikit-learn
