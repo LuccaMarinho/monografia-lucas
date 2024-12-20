@@ -47,9 +47,14 @@ def app_get_token():
 def app_sign_in():
     try:
         sp = sign_in(st.session_state["cached_token"])
-        st.session_state["signed_in"] = True
-        app_display_welcome()
-        st.success("Sign in success!")
+        if sp.current_user():  # Check if token is valid
+            st.session_state["signed_in"] = True
+            app_display_welcome()
+            st.success("Sign in success!")
+        else:
+            # Token is invalid, re-authenticate
+            st.error("Token expired or invalid. Please re-authenticate.")
+            app_display_welcome()
     except Exception as e:
         st.error("An error occurred during sign-in!")
         st.write("The error is as follows:")
