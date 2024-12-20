@@ -28,18 +28,21 @@ def authenticate():
         show_dialog=True  # Show dialog for each user
     )
 
-    auth_url = sp_oauth.get_authorize_url()
+    if 'access_token' not in st.session_state:
+        st.write("To use this app, you need to log in with your Spotify account.")
+        if st.button("Authenticate"):
+            auth_url = sp_oauth.get_authorize_url()
+            # Pass the auth_url to the open_page function using st.button's on_click
+            st.button("Connect Spotify Account", on_click=open_page, args=(auth_url,))  
 
-    st.button("Connect Spotify Account", on_click=open_page, args=(auth_url,))  # Add a button
-
-    code = st.query_params.get("code")  # Use experimental_get_query_params
-    st.write(code)
+    code = st.query_params.get("code")
     if code:
-        token_info = sp_oauth.get_access_token(code[0])  # Access the first element of the list
+        token_info = sp_oauth.get_access_token(code[0])
         st.session_state['access_token'] = token_info['access_token']
         st.session_state['refresh_token'] = token_info['refresh_token']
         st.session_state['token_expiry'] = time.time() + token_info['expires_in']
         st.success("Successfully authenticated with Spotify!")
+        st.rerun()
 
 def open_page(url):
     """Opens a URL in a new tab using JavaScript."""
