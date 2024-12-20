@@ -58,7 +58,6 @@ def app_sign_in():
         
     return sp
 
-
 def app_display_welcome():
     
     # import secrets from streamlit deployment
@@ -79,10 +78,6 @@ def app_display_welcome():
     
     # this SHOULD open the link in the same tab when Streamlit Cloud is updated
     # via the "_self" target
-    link_html = " <a target=\"_self\" href=\"{url}\" >{msg}</a> ".format(
-        url=auth_url,
-        msg="Click me to authenticate!"
-    )
     
     # define welcome
     welcome_msg = """
@@ -91,14 +86,8 @@ def app_display_welcome():
     associated with your account, you must log in. You only need to do this 
     once.
     """
-    
-    # define temporary note
-    note_temp = """
-    _Note: Unfortunately, the current version of Streamlit will not allow for
-    staying on the same page, so the authorization and redirection will open in a 
-    new tab. This has already been addressed in a development release, so it should
-    be implemented in Streamlit Cloud soon!_
-    """
+
+    st.button("Connect Spotify Account", on_click=open_page, args=(auth_url,)) 
 
     st.title("Spotify Playlist Generator")
 
@@ -108,6 +97,15 @@ def app_display_welcome():
                           "clicking the link below."]))
         st.markdown(link_html, unsafe_allow_html=True)
         st.markdown(note_temp)
+
+def open_page(url):
+    """Opens a URL in a new tab using JavaScript."""
+    open_script = f"""
+        <script type="text/javascript">
+            window.open('{url}', '_blank').focus();
+        </script>
+    """
+    components.html(open_script)
 
 def load_track_names(filename):
     df = pd.read_csv(filename, sep=";")
@@ -244,5 +242,4 @@ def main():
 
 
 if __name__ == '__main__':
-    st.title('Spotify Playlist Generator')
     main()
