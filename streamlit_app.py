@@ -27,9 +27,11 @@ def get_token(oauth, code):
     # return the token
     return token
 
+
 def sign_in(token):
     sp = spotipy.Spotify(auth=token)
     return sp
+
 
 def app_get_token():
     try:
@@ -40,6 +42,7 @@ def app_get_token():
         st.write(e)
     else:
         st.session_state["cached_token"] = token
+
 
 def app_sign_in():
     try:
@@ -55,6 +58,7 @@ def app_sign_in():
         
     return sp
 
+
 def app_display_welcome():
     
     # import secrets from streamlit deployment
@@ -63,17 +67,10 @@ def app_display_welcome():
     uri = redirect_uri
 
     # set scope and establish connection
-    scopes = " ".join(["user-read-private",
-                       "playlist-read-private",
-                       "playlist-modify-private",
-                       "playlist-modify-public",
-                       "user-read-recently-played"])
+    scopes = scope
 
     # create oauth object
-    oauth = SpotifyOAuth(scope=scopes,
-                         redirect_uri=uri,
-                         client_id=cid,
-                         client_secret=csecret)
+    oauth = SpotifyOAuth(scope=scopes, redirect_uri=uri, client_id=cid, client_secret=csecret)
     # store oauth in session
     st.session_state["oauth"] = oauth
 
@@ -185,10 +182,7 @@ def create_spotify_playlist(user_id, playlist_name, track_ids, sp):
         st.error(f"Error creating playlist: {e}")
         return None
 
-
-
-def main():
-    if "signed_in" not in st.session_state:
+if "signed_in" not in st.session_state:
         st.session_state["signed_in"] = False
     if "cached_token" not in st.session_state:
         st.session_state["cached_token"] = ""
@@ -200,7 +194,7 @@ def main():
     # %% authenticate with response stored in url
     
     # get current url (stored as dict)
-    url_params = st.experimental_get_query_params()
+    url_params = st.query_params()
     
     # attempt sign in with cached token
     if st.session_state["cached_token"] != "":
@@ -208,44 +202,46 @@ def main():
     # if no token, but code in url, get code, parse token, and sign in
     elif "code" in url_params:
         # all params stored as lists, see doc for explanation
-        st.session_state["code"] = url_params["code"][0]
+        st.session_state["code"] = url_params["code"]
         app_get_token()
         sp = app_sign_in()
     # otherwise, prompt for redirect
     else:
         app_display_welcome()
 
-        dfa = pd.read_csv('track_names.csv', sep=";")
-        G = load_graph()
-        track_names = load_track_names('track_names.csv')
 
-        start_track = st.selectbox('Start Track', track_names)
-        end_track = st.selectbox('End Track', track_names)
-        num_songs = st.number_input('Number of Songs', min_value=2)
+def main():
+    dfa = pd.read_csv('track_names.csv', sep=";")
+    G = load_graph()
+    track_names = load_track_names('track_names.csv')
 
-        if st.button('Find Playlist Tracks'):
-            if start_track and end_track and num_songs >= 2:
-                start_track_id = get_track_id_from_df(start_track, dfa)
-                end_track_id = get_track_id_from_df(end_track, dfa)
+    start_track = st.selectbox('Start Track', track_names)
+    end_track = st.selectbox('End Track', track_names)
+    num_songs = st.number_input('Number of Songs', min_value=2)
 
-                if start_track_id and end_track_id:
-                    try:
-                        closest_songs = find_closest_songs_weighted(
+    if st.button('Find Playlist Tracks'):
+        if start_track and end_track and num_songs >= 2:
+            start_track_id = get_track_id_from_df(start_track, dfa)
+            end_track_id = get_track_id_from_df(end_track, dfa)
+
+            if start_track_id and end_track_id:
+                try:
+                    closest_songs = find_closest_songs_weighted(
                             G, start_track_id, end_track_id, num_songs - 2, sp, dfa
                         )
-                        closest_songs.insert(0, start_track_id)  
-                        closest_songs.append(end_track_id)
-                        track_names = [get_track_info(track_id, sp)[0] for track_id in closest_songs]
-                        st.write('Playlist Tracks:', track_names)
-                        playlist_id = create_spotify_playlist(user_id, 'Generated Playlist', closest_songs, sp)
-                        st.write(f'Playlist created successfully: https://open.spotify.com/playlist/{playlist_id}')
+                    closest_songs.insert(0, start_track_id)  
+                    closest_songs.append(end_track_id)
+                    track_names = [get_track_info(track_id, sp)[0] for track_id in closest_songs]
+                    st.write('Playlist Tracks:', track_names)
+                    playlist_id = create_spotify_playlist(user_id, 'Generated Playlist', closest_songs, sp)
+                    st.write(f'Playlist created successfully: https://open.spotify.com/playlist/{playlist_id}')
 
-                    except Exception as e:
-                        st.error(f"Error finding path or creating playlist: {e}")
-                else:
-                    st.error("Track not found")
+                except Exception as e:
+                    st.error(f"Error finding path or creating playlist: {e}")
             else:
-                st.error('Please fill in all required fields and ensure "Number of Songs" is at least 2.')
+                st.error("Track not found")
+        else:
+            st.error('Please fill in all required fields and ensure "Number of Songs" is at least 2.')
 
 if __name__ == '__main__':
     st.title('Spotify Playlist Generator')
