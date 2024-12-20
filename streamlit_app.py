@@ -87,16 +87,14 @@ def app_display_welcome():
     once.
     """
 
-    st.button("Connect Spotify Account", on_click=open_page, args=(auth_url,)) 
 
     st.title("Spotify Playlist Generator")
 
     if not st.session_state["signed_in"]:
         st.markdown(welcome_msg)
+        st.button("Connect Spotify Account", on_click=open_page, args=(auth_url,))
         st.write(" ".join(["No tokens found for this session. Please log in by",
                           "clicking the link below."]))
-        st.markdown(link_html, unsafe_allow_html=True)
-        st.markdown(note_temp)
 
 def open_page(url):
     """Opens a URL in a new tab using JavaScript."""
