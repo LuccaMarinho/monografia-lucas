@@ -37,6 +37,7 @@ def authenticate():
     if code:
         token_info = sp_oauth.get_access_token(code[0])  # Access the first element of the list
         st.session_state['access_token'] = token_info['access_token']
+        st.session_state['refresh_token'] = token_info['refresh_token']
         st.session_state['token_expiry'] = time.time() + token_info['expires_in']
         st.success("Successfully authenticated with Spotify!")
 
