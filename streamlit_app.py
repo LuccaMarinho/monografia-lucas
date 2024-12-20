@@ -36,34 +36,25 @@ def sign_in(token):
 
 def app_get_token():
     try:
-        token = get_token(st.session_state["oauth"], st.session_state["code"])
+        token = get_token(st.session_state["code"], st.session_state["oauth"])
+        st.session_state["cached_token"] = token
     except Exception as e:
         st.error("An error occurred during token retrieval!")
         st.write("The error is as follows:")
         st.write(e)
-    else:
-        st.session_state["cached_token"] = token
 
 
 def app_sign_in():
     try:
-        # Try to get cached token
-        token = oauth.get_cached_token()
-        if token:
-            sp = sign_in(token)
-        else:
-            # If no cached token, try to retrieve from session state
-            token = st.session_state["cached_token"]
-            sp = sign_in(token)
+        sp = sign_in(st.session_state["cached_token"])
+        st.session_state["signed_in"] = True
+        app_display_welcome()
+        st.success("Sign in success!")
     except Exception as e:
         st.error("An error occurred during sign-in!")
         st.write("The error is as follows:")
         st.write(e)
-    else:
-        st.session_state["signed_in"] = True
-        app_display_welcome()
-        st.success("Sign in success!")
-        return sp
+    return sp
 
 def app_display_welcome():
     
@@ -77,8 +68,7 @@ def app_display_welcome():
 
     # create oauth object
     oauth = SpotifyOAuth(scope=scopes, redirect_uri=uri, client_id=cid, client_secret=csecret)
-    # store oauth in session
-    st.session_state["oauth"] = oauth
+    st.session_state["oauth"] = SpotifyOAuth(scope=scopes, redirect_uri=uri, client_id=cid, client_secret=csecret)
 
     # retrieve auth url
     auth_url = oauth.get_authorize_url()
