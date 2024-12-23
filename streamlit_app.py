@@ -34,7 +34,7 @@ def authenticate():
             # Pass the auth_url to the open_page function using st.button's on_click
         st.button("Connect Spotify Account", on_click=open_page, args=(auth_url,))  
 
-    code = st.query_params.get("code")
+    code = st.experimental_get_query_params().get("code")
     if code:
         try:
             token_info = sp_oauth.get_access_token(code[0])
