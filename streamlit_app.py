@@ -102,25 +102,7 @@ def get_track_info(track_id, sp):
     return (track['name'], track['artists'][0]['name']) if track else (None, None)
 
 def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
-    """
-    Finds the X closest songs to two songs in a weighted graph, 
-    considering both graph distance and content-based similarity.
-    Ensures the playlist starts with song_A_id and ends with song_B_id.
-
-    Args:
-      G: The weighted graph.
-      song_A_id: The ID of the first song (start song).
-      song_B_id: The ID of the second song (end song).
-      X: The number of closest songs to find (excluding start and end songs).
-      sp: The Spotipy object.
-      dfa: The DataFrame containing track IDs and names.
-
-    Returns:
-      A list of the X closest song IDs, starting with song_A_id and ending with song_B_id.
-    """
-
     def dijkstra_distances(graph, start_node):
-        """Calculates shortest path distances from a starting node."""
         distances = {node: float('infinity') for node in graph}
         distances[start_node] = 0
         pq = [(0, start_node)]
@@ -158,10 +140,10 @@ def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
     all_songs = bridge_songs + similar_songs
     ranked_songs = []
 
-    # Ensure start and end songs are included and ranked first
-    ranked_songs.append((song_A_id, 0))  # Start song with highest rank (0)
+    # Ensure start and end songs are included
+    ranked_songs.append((song_A_id, 0))  # Start song with highest rank
     if song_B_id not in all_songs:
-        all_songs.append(song_B_id)  # Add end song if not already present
+        all_songs.append(song_B_id)
 
     for song_id in all_songs:
         dist = distances_A.get(song_id) or distances_B.get(song_id) or float('inf')
@@ -171,13 +153,16 @@ def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
         combined_score = 0.2 * dist + 0.8 * (1 - similarity_score)
         ranked_songs.append((song_id, combined_score))
 
-    ranked_songs.sort(key=lambda x: x[1])  # Sort by combined score
+    ranked_songs.sort(key=lambda x: x[1])
 
-    # Ensure the end song is the last song
-    ranked_songs.remove((song_B_id, distances_B[song_B_id]))  # Remove initial ranking of end song
-    ranked_songs.append((song_B_id, float('inf')))  # Add end song with lowest rank (inf)
+    # Ensure the end song is the last song (if it exists in ranked_songs)
+    try:
+        ranked_songs.remove((song_B_id, distances_B[song_B_id]))
+    except ValueError:
+        pass
+    ranked_songs.append((song_B_id, float('inf')))  # End song with lowest rank
 
-    return [song_id for song_id, score in ranked_songs[:X+2]]  # Return X + 2 to include start and end songs
+    return [song_id for song_id, score in ranked_songs[:X+2]]
 
 def create_spotify_playlist(user_id, playlist_name, track_ids, sp):
     try:
