@@ -110,10 +110,15 @@ def generate_playlist(G, song_A_id, song_B_id, X):
     # Fallback to finding closest songs
     return find_closest_songs(G, song_A_id, song_B_id, X)
 
-def find_exact_path_bfs(graph, start, end, num_songs):
+def find_exact_path_bfs(graph, start, end, num_songs,, timeout=5):
+    start_time = time.time()
     queue = [(start, [start])]
     while queue:
         node, path = queue.pop(0)
+
+        if time.time() - start_time > timeout:
+            return None  # Timeout reached
+            
         if len(path) == num_songs and path[-1] == end:
             return path
         for neighbor in graph.neighbors(node):
