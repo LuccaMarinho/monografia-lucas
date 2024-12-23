@@ -229,6 +229,8 @@ def main():
             if start_track and end_track and num_songs >= 2:
                 start_track_id = get_track_id_from_df(start_track, dfa)
                 end_track_id = get_track_id_from_df(end_track, dfa)
+                st.write("Start Track:", start_track, "and: ", start_track_id)
+                st.write("End Track:", end_track, "and: ", end_track_id)
                 
                 try:
                     closest_songs = find_closest_songs_weighted(G, start_track_id, end_track_id, num_songs, sp, dfa)
@@ -236,6 +238,8 @@ def main():
                     st.write('Playlist Tracks:', track_names)
                     playlist_id = create_spotify_playlist(user_id, 'Generated Playlist', closest_songs, sp)
                     st.write(f'Playlist created successfully: https://open.spotify.com/playlist/{playlist_id}')
+                    st.write("Start Track:", start_track, "and: ", start_track_id)
+                    st.write("End Track:", end_track, "and: ", end_track_id)
 
                 except Exception as e:
                     st.error(f"Error finding path or creating playlist: {e}")
