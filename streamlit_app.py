@@ -162,23 +162,22 @@ def main():
             if start_track and end_track and num_songs >= 2:
                 start_track_id = get_track_id_from_df(start_track, dfa)
                 end_track_id = get_track_id_from_df(end_track, dfa)
-
-                if start_track_id and end_track_id:
-                    try:
-                        closest_songs = find_closest_songs(
+                
+                try:
+                    closest_songs = find_closest_songs(
                             G, start_track_id, end_track_id, num_songs, sp, dfa
                         )
-                        track_names = [get_track_info(track_id, sp)[0] for track_id in closest_songs]
-                        st.write('Playlist Tracks:', track_names)
-                        playlist_id = create_spotify_playlist(user_id, 'Generated Playlist', closest_songs, sp)
-                        st.write(f'Playlist created successfully: https://open.spotify.com/playlist/{playlist_id}')
+                    track_names = [get_track_info(track_id, sp)[0] for track_id in closest_songs]
+                    st.write('Playlist Tracks:', track_names)
+                    playlist_id = create_spotify_playlist(user_id, 'Generated Playlist', closest_songs, sp)
+                    st.write(f'Playlist created successfully: https://open.spotify.com/playlist/{playlist_id}')
 
-                    except Exception as e:
-                        st.error(f"Error finding path or creating playlist: {e}")
-                else:
-                    st.error("Track not found")
+                except Exception as e:
+                    st.error(f"Error finding path or creating playlist: {e}")
             else:
-                st.error('Please fill in all required fields and ensure "Number of Songs" is at least 2.')
+                st.error("Track not found")
+        else:
+            st.error('Please fill in all required fields and ensure "Number of Songs" is at least 2.')
 
     else:
         st.write('Waiting for authentication...')
