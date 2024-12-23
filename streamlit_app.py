@@ -101,7 +101,7 @@ def get_track_info(track_id, sp):
     track = sp.track(track_id)
     return (track['name'], track['artists'][0]['name']) if track else (None, None)
 
-def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
+def find_closest_songs_weighted(G, song_A_id, song_B_id, num_songs):
     def dijkstra_with_length(graph, start, end, num_songs):
         """
         Finds the shortest path in a graph with a specific number of nodes.
@@ -188,7 +188,7 @@ def main():
                 end_track_id = get_track_id_from_df(end_track, dfa)
                 
                 try:
-                    closest_songs = find_closest_songs_weighted(G, start_track_id, end_track_id, num_songs, sp, dfa)
+                    closest_songs = find_closest_songs_weighted(G, start_track_id, end_track_id, num_songs)
                     track_names = [get_track_info(track_id, sp)[0] for track_id in closest_songs]
                     st.write('Playlist Tracks:', track_names)
                     playlist_name = "{} - {} - {}".format(start_track, end_track, num_songs)
