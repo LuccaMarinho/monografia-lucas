@@ -160,7 +160,7 @@ def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
 
     ranked_songs.sort(key=lambda x: x[1])  # Sort by combined score
 
-    return [song_id for song_id, score in ranked_songs[:X]]
+    return [song_id for song_id, score in ranked_songs[:X+2]]
 
 def create_spotify_playlist(user_id, playlist_name, track_ids, sp):
     try:
@@ -199,6 +199,8 @@ def main():
                 
                 try:
                     closest_songs = find_closest_songs_weighted(G, start_track_id, end_track_id, num_songs - 2, sp, dfa)
+                    closest_songs.insert(0, start_track_id)   # Add start track here 
+                    closest_songs.append(end_track_id)
                     track_names = [get_track_info(track_id, sp)[0] for track_id in closest_songs]
                     st.write('Playlist Tracks:', track_names)
                     playlist_id = create_spotify_playlist(user_id, 'Generated Playlist', closest_songs, sp)
