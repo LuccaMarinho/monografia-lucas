@@ -2,3 +2,6 @@ networkx
 spotipy
 streamlit
 scikit-learn
+heapq
+time
+pandas
