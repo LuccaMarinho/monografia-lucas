@@ -101,46 +101,38 @@ def get_track_info(track_id, sp):
     track = sp.track(track_id)
     return (track['name'], track['artists'][0]['name']) if track else (None, None)
 
-def find_exact_path(graph, start, end, num_songs, current_path=[]):
-    """
-    Finds the exact path between two nodes in a graph, considering the number of desired songs.
+def generate_playlist(G, song_A_id, song_B_id, X, sp, dfa):
+    path = find_exact_path_bfs(G, song_A_id, song_B_id, X)
 
-    Args:
-        graph: The graph to search.
-        start: The starting node.
-        end: The ending node.
-        num_songs: The desired number of songs in the path.
-        current_path: The current path being explored.
+    if path:
+        return path
 
-    Returns:
-        A list of nodes representing the path, or None if no path is found.
-    """
+    # Fallback to finding closest songs
+    return find_closest_songs(G, song_A_id, song_B_id, X, sp, dfa)
 
-    current_path.append(start)
-
-    if len(current_path) == num_songs and current_path[-1] == end:
-        return current_path
-
-    for neighbor in graph.neighbors(start):
-        if neighbor not in current_path:
-            new_path = find_exact_path(graph, neighbor, end, num_songs, current_path.copy())
-            if new_path:
-                return new_path
-
-    # If no path is found, try to find the closest nodes to the start and end
-    if len(current_path) < num_songs:
-        distances_A = nx.shortest_path_length(graph, source=start, weight='weight')
-        distances_B = nx.shortest_path_length(graph, source=end, weight='weight')
-
-        sorted_nodes_A = sorted(distances_A.items(), key=lambda x: x[1])[:num_songs // 2]
-        sorted_nodes_B = sorted(distances_B.items(), key=lambda x: x[1])[:num_songs // 2]
-
-        closest_nodes = [node for node, _ in sorted_nodes_A] + [node for node, _ in sorted_nodes_B]
-
-        return [start] + closest_nodes + [end]
-
-    current_path.pop()
+def find_exact_path_bfs(graph, start, end, num_songs):
+    queue = [(start, [start])]
+    while queue:
+        node, path = queue.pop(0)
+        if len(path) == num_songs and path[-1] == end:
+            return path
+        for neighbor in graph.neighbors(node):
+            if neighbor not in path:
+                queue.append((neighbor, path + [neighbor]))
     return None
+
+def find_closest_songs(G, song_A_id, song_B_id, X, sp, dfa):
+    # Handle the case where there's no direct path
+    # Find the X/2 closest songs to each endpoint
+    distances_A = nx.shortest_path_length(G, source=song_A_id, weight='weight')
+    distances_B = nx.shortest_path_length(G, source=song_B_id, weight='weight')
+
+    sorted_nodes_A = sorted(distances_A.items(), key=lambda x: x[1])[:X // 2]
+    sorted_nodes_B = sorted(distances_B.items(), key=lambda x: x[1])[:X // 2]
+
+    closest_nodes = [node for node, _ in sorted_nodes_A] + [node for node, _ in sorted_nodes_B]
+
+    return [song_A_id] + closest_nodes + [song_B_id]
 
 def create_spotify_playlist(user_id, playlist_name, track_ids, sp):
     try:
@@ -177,7 +169,7 @@ def main():
                 end_track_id = get_track_id_from_df(end_track, dfa)
                 
                 try:
-                    closest_songs = find_exact_path(G, start_track_id, end_track_id, num_songs)
+                    closest_songs = generate_playlist(G, start_track_id, end_track_id, num_songs)
                     track_names = [get_track_info(track_id, sp)[0] for track_id in closest_songs]
                     st.write('Playlist Tracks:', track_names)
                     playlist_id = create_spotify_playlist(user_id, 'Generated Playlist', closest_songs, sp)
