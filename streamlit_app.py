@@ -134,7 +134,7 @@ def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
         similarities_A = cosine_similarity([features_A], all_features)
         similarities_B = cosine_similarity([features_B], all_features)
         avg_similarities = (similarities_A + similarities_B) / 2
-        similar_song_indices = avg_similarities.argsort()[0][::-1]
+        similar_song_indices = avg_similarities.argsort()[0][::-2]
         similar_songs = [dfa['track_id'].iloc[i] for i in similar_song_indices]
 
     all_songs = bridge_songs + similar_songs
@@ -160,10 +160,18 @@ def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
         ranked_songs.remove((song_B_id, distances_B[song_B_id]))
     except ValueError:
         pass
-    ranked_songs.append((song_B_id, float('inf')))  # End song with lowest rank
+    ranked_songs.append(song_B_id)  # End song with lowest rank
 
     return [song_id for song_id, score in ranked_songs[:X+2]]
 
+def create_spotify_playlist(user_id, playlist_name, track_ids, sp):
+    try:
+        playlist = sp.user_playlist_create(user=user_id, name=playlist_name, public=True)
+        sp.playlist_add_items(playlist_id=playlist['id'], items=track_ids)
+        return playlist['id']
+    except Exception as e:
+        st.error(f"Error creating playlist: {e}")
+        return None
 
 def main():
     authenticate()
