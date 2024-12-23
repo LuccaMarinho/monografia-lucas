@@ -110,7 +110,7 @@ def generate_playlist(G, song_A_id, song_B_id, X):
     # Fallback to finding closest songs
     return find_closest_songs(G, song_A_id, song_B_id, X)
 
-def find_exact_path_bfs(graph, start, end, num_songs,, timeout=5):
+def find_exact_path_bfs(graph, start, end, num_songs, timeout=5):
     start_time = time.time()
     queue = [(start, [start])]
     while queue:
