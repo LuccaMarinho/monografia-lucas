@@ -134,32 +134,33 @@ def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
         similarities_A = cosine_similarity([features_A], all_features)
         similarities_B = cosine_similarity([features_B], all_features)
         avg_similarities = (similarities_A + similarities_B) / 2
-        similar_song_indices = avg_similarities.argsort()[0][::-2]
+        similar_song_indices = avg_similarities.argsort()[0][::-1]
         similar_songs = [dfa['track_id'].iloc[i] for i in similar_song_indices]
 
     all_songs = bridge_songs + similar_songs
     ranked_songs = []
 
-    # Ensure start and end songs are included
-    ranked_songs.append((song_A_id, 0))  # Start song with highest rank
-    if song_B_id not in all_songs:
-        all_songs.append(song_B_id)
-
     for song_id in all_songs:
-        dist = distances_A.get(song_id) or distances_B.get(song_id) or float('inf')
-        similarity_score = avg_similarities[0][dfa['track_id'].tolist().index(song_id)] if (
-            song_id in dfa['track_id'].values and avg_similarities is not None
-        ) else 0
+        if song_id == song_B_id:
+            dist = float('inf')  # Force end song to have the lowest rank
+        else:
+            dist = distances_A.get(song_id) or distances_B.get(song_id) or float('inf')
+
+        # Calculate similarity score for song_id 
+        if song_id in dfa['track_id'].values and avg_similarities is not None:
+            song_index = dfa['track_id'].tolist().index(song_id)
+            similarity_score = avg_similarities[0][song_index]
+        else:
+            similarity_score = 0  # Assign 0 similarity if song not found in dfa or avg_similarities is not calculated
+
+        # Combine distance and similarity (adjust weights as needed)
         combined_score = 0.2 * dist + 0.8 * (1 - similarity_score)
+
         ranked_songs.append((song_id, combined_score))
 
-    ranked_songs.sort(key=lambda x: x[1])
+    ranked_songs.sort(key=lambda x: x[1])  # Sort by combined score
 
-    # Ensure the end song is the last song (if it exists in ranked_songs)
-    ranked_songs = [item for item in ranked_songs if item[0] != song_B_id]  # Remove all instances of song_B_id
-    ranked_songs.append((song_B_id, float('inf')))  # Add end song with lowest rank
-
-    return [song_id for song_id, score in ranked_songs[:X+2]]
+    return [song_id for song_id, score in ranked_songs[:X]]
 
 def create_spotify_playlist(user_id, playlist_name, track_ids, sp):
     try:
