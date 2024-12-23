@@ -101,43 +101,100 @@ def get_track_info(track_id, sp):
     track = sp.track(track_id)
     return (track['name'], track['artists'][0]['name']) if track else (None, None)
 
-def generate_playlist(G, song_A_id, song_B_id, X):
-    path = find_exact_path_bfs(G, song_A_id, song_B_id, X)
+def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
+    """
+    Finds the X closest songs to two songs in a weighted graph, 
+    considering both graph distance and content-based similarity.
 
-    if path:
-        return path
+    Args:
+      G: The weighted graph.
+      song_A_id: The ID of the first song.
+      song_B_id: The ID of the second song.
+      X: The number of closest songs to find.
+      sp: The Spotipy object.
+      dfa: The DataFrame containing track IDs and names.
 
-    # Fallback to finding closest songs
-    return find_closest_songs(G, song_A_id, song_B_id, X)
+    Returns:
+      A list of the X closest song IDs.
+    """
 
-def find_exact_path_bfs(graph, start, end, num_songs, timeout=5):
-    start_time = time.time()
-    queue = [(start, [start])]
-    while queue:
-        node, path = queue.pop(0)
+    def dijkstra_distances(graph, start_node):
+        """Calculates shortest path distances from a starting node."""
+        distances = {node: float('infinity') for node in graph}
+        distances[start_node] = 0
+        pq = [(0, start_node)]
+        while pq:
+            current_distance, current_node = heapq.heappop(pq)
+            if current_distance > distances[current_node]:
+                continue
+            for neighbor, weight in graph[current_node].items():
+                distance = current_distance + weight['weight']
+                if distance < distances[neighbor]:
+                    distances[neighbor] = distance
+                    heapq.heappush(pq, (distance, neighbor))
+        return distances
 
-        if time.time() - start_time > timeout:
-            return None  # Timeout reached
-            
-        if len(path) == num_songs and path[-1] == end:
-            return path
-        for neighbor in graph.neighbors(node):
-            if neighbor not in path:
-                queue.append((neighbor, path + [neighbor]))
-    return None
+    # 1. Find Bridge Songs (using weighted shortest paths)
+    distances_A = dijkstra_distances(G, song_A_id)
+    distances_B = dijkstra_distances(G, song_B_id)
 
-def find_closest_songs(G, song_A_id, song_B_id, X):
-    # Handle the case where there's no direct path
-    # Find the X/2 closest songs to each endpoint
-    distances_A = nx.shortest_path_length(G, source=song_A_id, weight='weight')
-    distances_B = nx.shortest_path_length(G, source=song_B_id, weight='weight')
+    common_neighbors = set(distances_A.keys()) & set(distances_B.keys())
 
-    sorted_nodes_A = sorted(distances_A.items(), key=lambda x: x[1])[:X // 2]
-    sorted_nodes_B = sorted(distances_B.items(), key=lambda x: x[1])[:X // 2]
+    bridge_songs = []
+    for neighbor in common_neighbors:
+        distance = distances_A[neighbor] + distances_B[neighbor]
+        bridge_songs.append((neighbor, distance))
 
-    closest_nodes = [node for node, _ in sorted_nodes_A] + [node for node, _ in sorted_nodes_B]
+    bridge_songs.sort(key=lambda x: x[1])  # Sort by combined distance
+    bridge_songs = [song_id for song_id, dist in bridge_songs]
 
-    return [song_A_id] + closest_nodes + [song_B_id]
+    # 2. Content-Based Filtering (if needed)
+    similar_songs = []
+    avg_similarities = None
+    if len(bridge_songs) < X:
+        features_A = sp.audio_features(song_A_id)[0]
+        features_B = sp.audio_features(song_B_id)[0]
+
+        # Extract features from all songs in dfa
+        all_features = [sp.audio_features(track_id)[0] for track_id in dfa['track_id']] 
+        
+        # Calculate cosine similarity of each song to A and B
+        similarities_A = cosine_similarity([features_A], all_features)
+        similarities_B = cosine_similarity([features_B], all_features)
+
+        # Combine similarities (using average similarity)
+        avg_similarities = (similarities_A + similarities_B) / 2
+        similar_song_indices = avg_similarities.argsort()[0][::-1]  # Sort by descending similarity
+
+        # Get track IDs from the indices
+        similar_songs = [dfa['track_id'].iloc[i] for i in similar_song_indices]
+
+    # 3. Combine and Rank
+    all_songs = bridge_songs + similar_songs
+    ranked_songs = []
+    for song_id in all_songs:
+        if song_id in distances_A:
+            dist = distances_A[song_id]
+        elif song_id in distances_B:
+            dist = distances_B[song_id]
+        else:
+            dist = float('inf')  # If not a neighbor, assign high distance
+        
+        # Calculate similarity score for song_id 
+        if song_id in dfa['track_id'].values and avg_similarities is not None:
+            song_index = dfa['track_id'].tolist().index(song_id)
+            similarity_score = avg_similarities[0][song_index]
+        else:
+            similarity_score = 0  # Assign 0 similarity if song not found in dfa or avg_similarities is not calculated
+
+        # Combine distance and similarity (adjust weights as needed)
+        combined_score = 0.7 * dist + 0.3 * (1 - similarity_score)
+
+        ranked_songs.append((song_id, combined_score))
+
+    ranked_songs.sort(key=lambda x: x[1])  # Sort by combined score
+
+    return [song_id for song_id, score in ranked_songs[:X]]
 
 def create_spotify_playlist(user_id, playlist_name, track_ids, sp):
     try:
@@ -174,7 +231,7 @@ def main():
                 end_track_id = get_track_id_from_df(end_track, dfa)
                 
                 try:
-                    closest_songs = generate_playlist(G, start_track_id, end_track_id, num_songs)
+                    closest_songs = find_closest_songs_weighted(G, start_track_id, end_track_id, num_songs, sp, dfa)
                     track_names = [get_track_info(track_id, sp)[0] for track_id in closest_songs]
                     st.write('Playlist Tracks:', track_names)
                     playlist_id = create_spotify_playlist(user_id, 'Generated Playlist', closest_songs, sp)
