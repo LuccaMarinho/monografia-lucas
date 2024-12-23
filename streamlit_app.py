@@ -102,66 +102,58 @@ def get_track_info(track_id, sp):
     return (track['name'], track['artists'][0]['name']) if track else (None, None)
 
 def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
-    def dijkstra_distances(graph, start_node):
-        distances = {node: float('infinity') for node in graph}
-        distances[start_node] = 0
-        pq = [(0, start_node)]
+    def dijkstra_with_length(graph, start, end, num_songs):
+        """
+        Finds the shortest path in a graph with a specific number of nodes.
+        """
+        distances = {(node, steps): float('infinity') for node in graph for steps in range(num_songs)}
+        distances[(start, 0)] = 0
+        pq = [(0, start, 0)]  # Priority queue: (distance, node, steps)
+        parent = {}
+        parent[(start, 0)] = None
+
         while pq:
-            current_distance, current_node = heapq.heappop(pq)
-            if current_distance > distances[current_node]:
+            current_distance, current_node, current_steps = heapq.heappop(pq)
+
+            if current_distance > distances[(current_node, current_steps)]:
                 continue
-            for neighbor, weight in graph[current_node].items():
-                distance = current_distance + weight['weight']
-                if distance < distances[neighbor]:
-                    distances[neighbor] = distance
-                    heapq.heappush(pq, (distance, neighbor))
-        return distances
 
-    distances_A = dijkstra_distances(G, song_A_id)
-    distances_B = dijkstra_distances(G, song_B_id)
+            if current_steps == num_songs - 1 and current_node == end:
+                path = []
+                while current_node:
+                    path.append(current_node)
+                    current_node, current_steps = parent[(current_node, current_steps)]
+                return path[::-1]  # Reverse the path
 
-    common_neighbors = set(distances_A.keys()) & set(distances_B.keys())
-    bridge_songs = sorted([(neighbor, distances_A[neighbor] + distances_B[neighbor]) 
-                           for neighbor in common_neighbors], key=lambda x: x[1])
-    bridge_songs = [song_id for song_id, dist in bridge_songs]
+            if current_steps < num_songs - 1:
+                for neighbor, weight in graph[current_node].items():
+                    distance = current_distance + weight['weight']
+                    if distance < distances[(neighbor, current_steps + 1)]:
+                        distances[(neighbor, current_steps + 1)] = distance
+                        parent[(neighbor, current_steps + 1)] = (current_node, current_steps)
+                        heapq.heappush(pq, (distance, neighbor, current_steps + 1))
 
-    similar_songs = []
-    avg_similarities = None
-    if len(bridge_songs) < X:
-        features_A = sp.audio_features(song_A_id)[0]
-        features_B = sp.audio_features(song_B_id)[0]
-        all_features = [sp.audio_features(track_id)[0] for track_id in dfa['track_id']]
-        similarities_A = cosine_similarity([features_A], all_features)
-        similarities_B = cosine_similarity([features_B], all_features)
-        avg_similarities = (similarities_A + similarities_B) / 2
-        similar_song_indices = avg_similarities.argsort()[0][::-1]
-        similar_songs = [dfa['track_id'].iloc[i] for i in similar_song_indices]
+        return None  # No path found
 
-    all_songs = bridge_songs + similar_songs
-    ranked_songs = []
+    # 1. Try to find a direct path
+    path = dijkstra_with_length(G, song_A_id, song_B_id, num_songs)
+    if path:
+        return path
 
-    for song_id in all_songs:
-        if song_id == song_B_id:
-            dist = float('inf')  # Force end song to have the lowest rank
-        else:
-            dist = distances_A.get(song_id) or distances_B.get(song_id) or float('inf')
+    # 2. If no direct path, try finding paths to intermediate nodes
+    for intermediate_node in G.nodes():
+        if intermediate_node != song_A_id and intermediate_node != song_B_id:
+            # Find path from start to intermediate
+            path_a = dijkstra_with_length(G, song_A_id, intermediate_node, num_songs // 2) 
+            # Find path from intermediate to end
+            path_b = dijkstra_with_length(G, intermediate_node, song_B_id, num_songs // 2)  
 
-        # Calculate similarity score for song_id 
-        if song_id in dfa['track_id'].values and avg_similarities is not None:
-            song_index = dfa['track_id'].tolist().index(song_id)
-            similarity_score = avg_similarities[0][song_index]
-        else:
-            similarity_score = 0  # Assign 0 similarity if song not found in dfa or avg_similarities is not calculated
+            if path_a and path_b:
+                # Combine paths (remove duplicate intermediate node)
+                return path_a + path_b[1:]  
 
-        # Combine distance and similarity (adjust weights as needed)
-        combined_score = 0.2 * dist + 0.8 * (1 - similarity_score)
-
-        ranked_songs.append((song_id, combined_score))
-
-    ranked_songs.sort(key=lambda x: x[1])  # Sort by combined score
-
-    return [song_id for song_id, score in ranked_songs[:X]]
-
+    return None  # No path found
+    
 def create_spotify_playlist(user_id, playlist_name, track_ids, sp):
     try:
         playlist = sp.user_playlist_create(user=user_id, name=playlist_name, public=True)
@@ -196,9 +188,7 @@ def main():
                 end_track_id = get_track_id_from_df(end_track, dfa)
                 
                 try:
-                    closest_songs = find_closest_songs_weighted(G, start_track_id, end_track_id, num_songs - 2, sp, dfa)
-                    closest_songs.insert(0, start_track_id)   # Add start track here 
-                    closest_songs.append(end_track_id)
+                    closest_songs = find_closest_songs_weighted(G, start_track_id, end_track_id, num_songs, sp, dfa)
                     track_names = [get_track_info(track_id, sp)[0] for track_id in closest_songs]
                     st.write('Playlist Tracks:', track_names)
                     playlist_name = "{} - {} - {}".format(start_track, end_track, num_songs)
