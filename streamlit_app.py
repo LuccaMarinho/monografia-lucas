@@ -105,17 +105,18 @@ def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
     """
     Finds the X closest songs to two songs in a weighted graph, 
     considering both graph distance and content-based similarity.
+    Ensures the playlist starts with song_A_id and ends with song_B_id.
 
     Args:
       G: The weighted graph.
-      song_A_id: The ID of the first song.
-      song_B_id: The ID of the second song.
-      X: The number of closest songs to find.
+      song_A_id: The ID of the first song (start song).
+      song_B_id: The ID of the second song (end song).
+      X: The number of closest songs to find (excluding start and end songs).
       sp: The Spotipy object.
       dfa: The DataFrame containing track IDs and names.
 
     Returns:
-      A list of the X closest song IDs.
+      A list of the X closest song IDs, starting with song_A_id and ending with song_B_id.
     """
 
     def dijkstra_distances(graph, start_node):
@@ -134,67 +135,49 @@ def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
                     heapq.heappush(pq, (distance, neighbor))
         return distances
 
-    # 1. Find Bridge Songs (using weighted shortest paths)
     distances_A = dijkstra_distances(G, song_A_id)
     distances_B = dijkstra_distances(G, song_B_id)
 
     common_neighbors = set(distances_A.keys()) & set(distances_B.keys())
-
-    bridge_songs = []
-    for neighbor in common_neighbors:
-        distance = distances_A[neighbor] + distances_B[neighbor]
-        bridge_songs.append((neighbor, distance))
-
-    bridge_songs.sort(key=lambda x: x[1])  # Sort by combined distance
+    bridge_songs = sorted([(neighbor, distances_A[neighbor] + distances_B[neighbor]) 
+                           for neighbor in common_neighbors], key=lambda x: x[1])
     bridge_songs = [song_id for song_id, dist in bridge_songs]
 
-    # 2. Content-Based Filtering (if needed)
     similar_songs = []
     avg_similarities = None
     if len(bridge_songs) < X:
         features_A = sp.audio_features(song_A_id)[0]
         features_B = sp.audio_features(song_B_id)[0]
-
-        # Extract features from all songs in dfa
-        all_features = [sp.audio_features(track_id)[0] for track_id in dfa['track_id']] 
-        
-        # Calculate cosine similarity of each song to A and B
+        all_features = [sp.audio_features(track_id)[0] for track_id in dfa['track_id']]
         similarities_A = cosine_similarity([features_A], all_features)
         similarities_B = cosine_similarity([features_B], all_features)
-
-        # Combine similarities (using average similarity)
         avg_similarities = (similarities_A + similarities_B) / 2
-        similar_song_indices = avg_similarities.argsort()[0][::-1]  # Sort by descending similarity
-
-        # Get track IDs from the indices
+        similar_song_indices = avg_similarities.argsort()[0][::-1]
         similar_songs = [dfa['track_id'].iloc[i] for i in similar_song_indices]
 
-    # 3. Combine and Rank
     all_songs = bridge_songs + similar_songs
     ranked_songs = []
+
+    # Ensure start and end songs are included and ranked first
+    ranked_songs.append((song_A_id, 0))  # Start song with highest rank (0)
+    if song_B_id not in all_songs:
+        all_songs.append(song_B_id)  # Add end song if not already present
+
     for song_id in all_songs:
-        if song_id in distances_A:
-            dist = distances_A[song_id]
-        elif song_id in distances_B:
-            dist = distances_B[song_id]
-        else:
-            dist = float('inf')  # If not a neighbor, assign high distance
-        
-        # Calculate similarity score for song_id 
-        if song_id in dfa['track_id'].values and avg_similarities is not None:
-            song_index = dfa['track_id'].tolist().index(song_id)
-            similarity_score = avg_similarities[0][song_index]
-        else:
-            similarity_score = 0  # Assign 0 similarity if song not found in dfa or avg_similarities is not calculated
-
-        # Combine distance and similarity (adjust weights as needed)
-        combined_score = 0.7 * dist + 0.3 * (1 - similarity_score)
-
+        dist = distances_A.get(song_id) or distances_B.get(song_id) or float('inf')
+        similarity_score = avg_similarities[0][dfa['track_id'].tolist().index(song_id)] if (
+            song_id in dfa['track_id'].values and avg_similarities is not None
+        ) else 0
+        combined_score = 0.2 * dist + 0.8 * (1 - similarity_score)
         ranked_songs.append((song_id, combined_score))
 
     ranked_songs.sort(key=lambda x: x[1])  # Sort by combined score
 
-    return [song_id for song_id, score in ranked_songs[:X]]
+    # Ensure the end song is the last song
+    ranked_songs.remove((song_B_id, distances_B[song_B_id]))  # Remove initial ranking of end song
+    ranked_songs.append((song_B_id, float('inf')))  # Add end song with lowest rank (inf)
+
+    return [song_id for song_id, score in ranked_songs[:X+2]]  # Return X + 2 to include start and end songs
 
 def create_spotify_playlist(user_id, playlist_name, track_ids, sp):
     try:
@@ -233,7 +216,7 @@ def main():
                 st.write("End Track:", end_track, "and: ", end_track_id)
                 
                 try:
-                    closest_songs = find_closest_songs_weighted(G, start_track_id, end_track_id, num_songs, sp, dfa)
+                    closest_songs = find_closest_songs_weighted(G, start_track_id, end_track_id, num_songs - 2, sp, dfa)
                     track_names = [get_track_info(track_id, sp)[0] for track_id in closest_songs]
                     st.write('Playlist Tracks:', track_names)
                     playlist_id = create_spotify_playlist(user_id, 'Generated Playlist', closest_songs, sp)
