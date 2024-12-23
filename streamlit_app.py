@@ -3,9 +3,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
 import streamlit as st
-import webbrowser
 import time
-import random
 import heapq
 from sklearn.metrics.pairwise import cosine_similarity
 import streamlit.components.v1 as components
