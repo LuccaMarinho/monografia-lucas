@@ -155,16 +155,14 @@ def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
 
     ranked_songs.sort(key=lambda x: x[1])
 
-    return [song_id for song_id, score in ranked_songs[:X]]
-
-def create_spotify_playlist(user_id, playlist_name, track_ids, sp):
+    # Ensure the end song is the last song (if it exists in ranked_songs)
     try:
-        playlist = sp.user_playlist_create(user=user_id, name=playlist_name, public=True)
-        sp.playlist_add_items(playlist_id=playlist['id'], items=track_ids)
-        return playlist['id']
-    except Exception as e:
-        st.error(f"Error creating playlist: {e}")
-        return None
+        ranked_songs.remove((song_B_id, distances_B[song_B_id]))
+    except ValueError:
+        pass
+    ranked_songs.append((song_B_id, float('inf')))  # End song with lowest rank
+
+    return [song_id for song_id, score in ranked_songs[:X+2]]
 
 
 def main():
