@@ -117,21 +117,28 @@ def find_closest_songs(G, song_A_id, song_B_id, X, sp, dfa):
         A list of X song IDs, including the start and end songs.
     """
 
-    def shortest_path_lengths(graph, start_node):
-        distances = nx.shortest_path_length(graph, source=start_node)
-        return distances
+    try:
+        shortest_path = nx.shortest_path(G, source=song_A_id, target=song_B_id, weight='weight')
+        intermediate_nodes = shortest_path[1:-1]
 
-    distances_A = shortest_path_lengths(G, song_A_id)
-    distances_B = shortest_path_lengths(G, song_B_id)
+        # Select the top X-2 unique nodes
+        unique_nodes = list(set(intermediate_nodes))[:X - 2]
 
-    # Combine distances and sort
-    combined_distances = {node: distances_A[node] + distances_B[node] for node in G.nodes()}
-    sorted_nodes = sorted(combined_distances, key=combined_distances.get)
+        return [song_A_id] + unique_nodes + [song_B_id]
 
-    # Select the closest X songs, including start and end
-    closest_songs = [song_A_id] + sorted_nodes[:X - 2] + [song_B_id]
+    except nx.NetworkXNoPath:
+        # Handle the case where there's no path at all
+        # Find the X/2 closest songs to each endpoint
+        distances_A = nx.shortest_path_length(G, source=song_A_id, weight='weight')
+        distances_B = nx.shortest_path_length(G, source=song_B_id, weight='weight')
 
-    return closest_songs
+        sorted_nodes_A = sorted(distances_A.items(), key=lambda x: x[1])[:X // 2]
+        sorted_nodes_B = sorted(distances_B.items(), key=lambda x: x[1])[:X // 2]
+
+        closest_nodes = [node for node, _ in sorted_nodes_A] + [node for node, _ in sorted_nodes_B]
+
+        return [song_A_id] + closest_nodes + [song_B_id]
+    
 def main():
     authenticate()
 
