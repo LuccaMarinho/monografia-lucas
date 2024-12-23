@@ -156,11 +156,8 @@ def find_closest_songs_weighted(G, song_A_id, song_B_id, X, sp, dfa):
     ranked_songs.sort(key=lambda x: x[1])
 
     # Ensure the end song is the last song (if it exists in ranked_songs)
-    try:
-        ranked_songs.remove((song_B_id, distances_B[song_B_id]))
-    except ValueError:
-        pass
-    ranked_songs.append(song_B_id)  # End song with lowest rank
+    ranked_songs = [item for item in ranked_songs if item[0] != song_B_id]  # Remove all instances of song_B_id
+    ranked_songs.append((song_B_id, float('inf')))  # Add end song with lowest rank
 
     return [song_id for song_id, score in ranked_songs[:X+2]]
 
