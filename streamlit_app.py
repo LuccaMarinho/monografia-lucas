@@ -101,44 +101,57 @@ def get_track_info(track_id, sp):
     track = sp.track(track_id)
     return (track['name'], track['artists'][0]['name']) if track else (None, None)
 
-def find_closest_songs(G, song_A_id, song_B_id, X, sp, dfa):
+def find_exact_path(graph, start, end, num_songs, current_path=[]):
     """
-    Finds the X closest songs to the given two songs based on graph distances.
+    Finds the exact path between two nodes in a graph, considering the number of desired songs.
 
     Args:
-        G: The graph representing song relationships.
-        song_A_id: The ID of the starting song.
-        song_B_id: The ID of the ending song.
-        X: The number of songs to find.
-        sp: The Spotify API object.
-        dfa: The DataFrame containing track information.
+        graph: The graph to search.
+        start: The starting node.
+        end: The ending node.
+        num_songs: The desired number of songs in the path.
+        current_path: The current path being explored.
 
     Returns:
-        A list of X song IDs, including the start and end songs.
+        A list of nodes representing the path, or None if no path is found.
     """
 
-    try:
-        shortest_path = nx.shortest_path(G, source=song_A_id, target=song_B_id, weight='weight')
-        intermediate_nodes = shortest_path[1:-1]
+    current_path.append(start)
 
-        # Select the top X-2 unique nodes
-        unique_nodes = list(set(intermediate_nodes))[:X - 2]
+    if len(current_path) == num_songs and current_path[-1] == end:
+        return current_path
 
-        return [song_A_id] + unique_nodes + [song_B_id]
+    for neighbor in graph.neighbors(start):
+        if neighbor not in current_path:
+            new_path = find_exact_path(graph, neighbor, end, num_songs, current_path.copy())
+            if new_path:
+                return new_path
 
-    except nx.NetworkXNoPath:
-        # Handle the case where there's no path at all
-        # Find the X/2 closest songs to each endpoint
-        distances_A = nx.shortest_path_length(G, source=song_A_id, weight='weight')
-        distances_B = nx.shortest_path_length(G, source=song_B_id, weight='weight')
+    # If no path is found, try to find the closest nodes to the start and end
+    if len(current_path) < num_songs:
+        distances_A = nx.shortest_path_length(graph, source=start, weight='weight')
+        distances_B = nx.shortest_path_length(graph, source=end, weight='weight')
 
-        sorted_nodes_A = sorted(distances_A.items(), key=lambda x: x[1])[:X // 2]
-        sorted_nodes_B = sorted(distances_B.items(), key=lambda x: x[1])[:X // 2]
+        sorted_nodes_A = sorted(distances_A.items(), key=lambda x: x[1])[:num_songs // 2]
+        sorted_nodes_B = sorted(distances_B.items(), key=lambda x: x[1])[:num_songs // 2]
 
         closest_nodes = [node for node, _ in sorted_nodes_A] + [node for node, _ in sorted_nodes_B]
 
-        return [song_A_id] + closest_nodes + [song_B_id]
-    
+        return [start] + closest_nodes + [end]
+
+    current_path.pop()
+    return None
+
+def create_spotify_playlist(user_id, playlist_name, track_ids, sp):
+    try:
+        playlist = sp.user_playlist_create(user=user_id, name=playlist_name, public=True)
+        sp.playlist_add_items(playlist_id=playlist['id'], items=track_ids)
+        return playlist['id']
+    except Exception as e:
+        st.error(f"Error creating playlist: {e}")
+        return None
+
+
 def main():
     authenticate()
 
@@ -164,9 +177,7 @@ def main():
                 end_track_id = get_track_id_from_df(end_track, dfa)
                 
                 try:
-                    closest_songs = find_closest_songs(
-                            G, start_track_id, end_track_id, num_songs, sp, dfa
-                        )
+                    closest_songs = find_exact_path(G, start_track_id, end_track_id, num_songs)
                     track_names = [get_track_info(track_id, sp)[0] for track_id in closest_songs]
                     st.write('Playlist Tracks:', track_names)
                     playlist_id = create_spotify_playlist(user_id, 'Generated Playlist', closest_songs, sp)
@@ -175,10 +186,7 @@ def main():
                 except Exception as e:
                     st.error(f"Error finding path or creating playlist: {e}")
             else:
-                st.error("Track not found")
-        else:
-            st.error('Please fill in all required fields and ensure "Number of Songs" is at least 2.')
-
+                st.error('Please fill in all required fields and ensure "Number of Songs" is at least 2.')
     else:
         st.write('Waiting for authentication...')
 
