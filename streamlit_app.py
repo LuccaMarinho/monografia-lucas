@@ -101,14 +101,14 @@ def get_track_info(track_id, sp):
     track = sp.track(track_id)
     return (track['name'], track['artists'][0]['name']) if track else (None, None)
 
-def generate_playlist(G, song_A_id, song_B_id, X, sp, dfa):
+def generate_playlist(G, song_A_id, song_B_id, X):
     path = find_exact_path_bfs(G, song_A_id, song_B_id, X)
 
     if path:
         return path
 
     # Fallback to finding closest songs
-    return find_closest_songs(G, song_A_id, song_B_id, X, sp, dfa)
+    return find_closest_songs(G, song_A_id, song_B_id, X)
 
 def find_exact_path_bfs(graph, start, end, num_songs):
     queue = [(start, [start])]
@@ -121,7 +121,7 @@ def find_exact_path_bfs(graph, start, end, num_songs):
                 queue.append((neighbor, path + [neighbor]))
     return None
 
-def find_closest_songs(G, song_A_id, song_B_id, X, sp, dfa):
+def find_closest_songs(G, song_A_id, song_B_id, X):
     # Handle the case where there's no direct path
     # Find the X/2 closest songs to each endpoint
     distances_A = nx.shortest_path_length(G, source=song_A_id, weight='weight')
