@@ -11,7 +11,7 @@ import streamlit.components.v1 as components
 
 # Replace with your Spotify API credentials
 client_id = '7f639bf9d989414aa6af202b0b27edff'
-client_secret = 'ea33b989a84841949af25f8fa7bca64a'
+client_secret = '9b081af0b8114c429ce892cfc6d0e0fa'
 redirect_uri = 'https://monografia-ufmg-lucas.streamlit.app/' # Replace with your redirect URI
 
 scope = 'user-read-private user-library-read playlist-modify-public playlist-modify-private'
